@@ -138,18 +138,80 @@ function finishSwap() {                       // called when S.swap.t reaches SW
 
 Render the moving tile above its neighbour (a higher `renderOrder`) so the two never z-fight mid-slide.
 
-## When the grid opens a path (water, sand, a falling hero)
+## When the grid opens a path (water, sand, lava)
 
-- Recompute reachability after each clear, as a BFS over open cells from the source cells (for example, the
-  channel's mouth above row 0, columns 0 to 2). Use the BFS parent links to rebuild the shortest path to the goal
-  (for example, a drain under the bottom row).
-- Before the goal is reached, the flow fills the lowest reachable open cells first, and each cell's volume is
-  taken from the source.
-- Once a path reaches the goal, drain the source at **one constant rate** until it's empty. Don't fill pockets
-  first and then drain, or the pace stutters. Run a visual stream front down the path at a few cells per second,
-  fill side pockets slowly and only for show, and emit droplets at the exit every frame.
-- Put the danger (creeping gravel, rising lava, a timer) outside the grid, so the grid stays a calm puzzle and
-  the tension lives in the world above it.
+Players notice fake water at once. Water that "fills a cell from the bottom up", or that appears in a gap it
+couldn't have reached yet, reads as wrong. Simulate it. This approach shipped at 60 fps with no measurable cost:
+
+**A fine grid of on/off cells.** Use 9x9 sim cells per tile (4 px). Tiles are walls, and each open sim cell is
+water or air. Rebuild the wall mask only when the tiles change.
+
+**Each step (about 90 Hz, a fixed step with an accumulator, at most 6 steps per frame):**
+1. **Source.** Pour up to N cells per step into the open cells under the mouth (here 5 of 20, about
+   7,000 px²/s), taking each cell's area from the source's volume. The cap sets how hard the pour reads.
+2. **Drain.** Each water cell on the bottom row above the drain leaves with probability p per step (0.2). That
+   gives a steady outflow that grows with the width of the exit. When the inflow can beat it, the path backs up
+   and fills, as it would in a real pipe.
+3. **Gravity, scanning from the bottom row up, alternating left-right each step.** A water cell falls if the
+   cell below is open. Otherwise it slides diagonally down if both the side and the diagonal are open. Otherwise
+   it runs sideways up to 2 cells, stopping early over a hole. Stamp every moved cell with the step number so it
+   moves once per step.
+4. **Levelling (communicating vessels).** Label the bodies of *still* water (cells that didn't move this step),
+   using a BFS over 4-neighbours. For each body, find its top row and its empty neighbours. Fill up to 3 of those
+   neighbours per step, lowest first, but only ones more than one row below the body's top. Take each cell off
+   the body's top row. If the body touches the mouth while the source still has water, its level is the source's
+   head instead, and the cells come from the source. Then side pockets fill only once the network is
+   pressurized, and a chimney above a free surface stays dry. Excluding moving water from the bodies matters: a
+   falling stream must not count as a pressurized link to a pool below it.
+
+**Rendering (one fragment shader over the grid).**
+- Upload the sim as a small texture with linear filtering. r is water, and wall cells touching water also count
+  as water, so the outline sits flush on the tiles. b flags water that moved in the last 2 or 3 steps.
+- **Still body:** blur r minus b horizontally over 3 samples, then cut at 0.5 with fwidth antialiasing. Lone
+  hopping particles flatten into a level surface.
+- **Moving water:** average all water over a 7x3 window and draw it as a translucent ribbon (alpha up to 0.75).
+  A sparse falling stream then reads as a pour, not a checkerboard.
+- **Surface:** a thin bright rim where the still body has air 3 px above.
+- Spawn droplet particles where cells leave through the drain, and a few at the mouth while it pours.
+
+**One simulation, many materials.** Expose the rules as parameters, and the same code gives liquids and
+granular solids:
+
+| Parameter | Water | Lava | Sand | Gravel |
+|---|---|---|---|---|
+| Steps per second (viscosity) | 90 | 40 | 90 | 70 |
+| Cells fallen per step (density) | 1 | 1 | 2 | 2 |
+| Sideways run, cells per step | 3 | 2 | 3 | 2 |
+| Diagonal slide chance | 100% | 100% | 100% | 100% |
+| Levelling cells per step (pressure) | 3 | 2 | 2 | 2 |
+
+Defaults should fill every reachable space for every material: a puzzle that opens cavities reads as broken when
+sand stops short of a gap. Keep some sideways run and levelling in all of them. For real heaping, offer spread 0,
+levelling 0 and a 30–60% slide chance as an option: the material then piles at a slope and can choke a narrow
+mouth.
+
+**Recording from the page.** A record button can save the board alone. Each frame, right after the render, crop
+the WebGL canvas to the board into a 2D canvas at the video's size, and draw any DOM pointer on top (scale its
+CSS position by the board's scale). Record that canvas with `captureStream(60)` and `MediaRecorder`. Prefer
+`video/mp4;codecs=avc1.640028`; Chromium encodes it. Fall back to WebM. Save the result through a download link
+on stop. The panel and the overlays never reach the file.
+
+**Proxy rendering.** When the build is a reference proxy for a video-to-video pass rather than a final game, draw
+the material as one flat color, exactly per sim cell (nearest sampling), with no surface rim, ribbons, waves,
+splashes or tint on objects inside it. Put the parameters, a preset menu, the color and a post-effects toggle in a
+side panel that hides with one key and with `?panel=0` for recordings. Keep the board left of the panel: an
+orthographic camera whose bounds are the whole canvas, not symmetric around the board.
+
+**Game state.** Win when the source holds less than one sim cell. Comparing against 0 or 1 never triggers,
+because the mouth only takes whole cells. Report a tile as wet ('~') when more than half its sim cells hold
+water. Keep a BFS over open *tiles* from the mouth for a `drainOpen` flag in the playtest state.
+
+**Test it on a fixed layout before tuning by feel.** Add a URL hook such as `?carve=c,r;c,r` that opens cells at
+the start. Watch a shaft, a long horizontal corridor, an upward chimney and a lower basin. Screenshot the grid
+every 250 ms, and log the source volume every second with a path to the drain to check the pace is steady.
+
+Put the danger (creeping gravel, rising lava, a timer) outside the grid, so the grid stays a calm puzzle and
+the tension lives in the world above it.
 
 ## State for the playtest
 
