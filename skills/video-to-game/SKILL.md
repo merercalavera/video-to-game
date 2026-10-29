@@ -83,6 +83,7 @@ with `FAL_KEY` set for `fal_asset.py`. Run them from this skill's directory or w
 | `references/game-loop.md` | building: structure, input, camera, state contract, multiplayer, performance |
 | `references/look-and-post.md` | matching the video's look: grade, fog, bloom, density, hierarchy, the side-by-side routine |
 | `references/playtest.md` | playing your own game: scenarios, recording, best window, what to fix |
+| `references/match-3.md` | the game has a tile grid to solve (match-3, swap tiles, tap-to-blast, a puzzle grid that opens a path): rules, implementation, input, flow through cleared cells, playtest |
 
 Templates: `templates/game.html` (Three.js skeleton with the post stack, input, state contract),
 `templates/play.mjs` (a keyboard playtest scenario).

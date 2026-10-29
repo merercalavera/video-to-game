@@ -7,7 +7,7 @@ Guidance for coding agents working on this repository. To use the skill rather t
 ```text
 skills/video-to-game/          the skill (this is what gets installed)
   SKILL.md                     entry point: workflow, hard rules, reference routing
-  references/                  study the video, fal assets, game loop, look and post-processing, playtest
+  references/                  study the video, fal assets, game loop, look and post-processing, playtest, match-3
   scripts/                     study_video, fal_asset, side_by_side, best_window (Python), record_play (Node)
   templates/                   game.html (Three.js skeleton, post stack, state contract), play.mjs (scenario)
 gallery/<game>/                poster.gif, README.md, game/ (code only; assets live on the demo site)

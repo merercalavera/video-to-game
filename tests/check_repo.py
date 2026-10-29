@@ -16,7 +16,7 @@ errors = []
 
 def files(exts):
     for d, dirs, fs in os.walk(ROOT):
-        dirs[:] = [x for x in dirs if x not in ('.git', 'node_modules')]
+        dirs[:] = [x for x in dirs if x not in ('.git', 'node_modules', '.venv', 'projects')]
         for f in fs:
             if f.endswith(exts):
                 yield os.path.join(d, f)

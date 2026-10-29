@@ -111,7 +111,7 @@ and every prompt used.
 ```text
 skills/video-to-game/
   SKILL.md                 workflow, hard rules, reference routing
-  references/              study the video, fal assets, game loop, look and post-processing, playtest
+  references/              study the video, fal assets, game loop, look and post-processing, playtest, match-3
   scripts/                 study_video.py, fal_asset.py, side_by_side.py, best_window.py, record_play.mjs
   templates/               game.html (Three.js skeleton with post stack and state contract), play.mjs
 gallery/<game>/            poster.gif, README.md (prompt, controls, fal calls, cost), game/ (the code)

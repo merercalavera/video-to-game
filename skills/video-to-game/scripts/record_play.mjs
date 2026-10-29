@@ -6,7 +6,7 @@
 // play.mjs exports `async function play(page, { seconds, t0 })` and only presses keys (page.keyboard) and
 // reads state the game exposes (window.__game). The take is encoded with each frame's real duration, so a
 // slow moment stays slow instead of being stretched. Needs Node 18+, ffmpeg, and `npm i playwright-core`
-// (or playwright). Uses the system Chrome when found, for real GPU WebGL.
+// (or playwright). Uses the system Chrome (or Edge on Windows) when found, for real GPU WebGL.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -21,7 +21,9 @@ if (!url || !playFile) { console.error('usage: node record_play.mjs URL play.mjs
 
 let chromium;
 try { ({ chromium } = await import('playwright-core')); } catch { ({ chromium } = await import('playwright')); }
-const chrome = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium']
+const chrome = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium',
+  'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']
   .find(p => fs.existsSync(p));
 const browser = await chromium.launch({
   executablePath: chrome, headless: true,

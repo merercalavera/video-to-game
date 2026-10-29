@@ -16,8 +16,8 @@ Usage:
 --arg key=value   JSON value if it parses (numbers, true, lists), else a string. Repeat for each field.
 --file key=path   uploads the file; repeat the same key to build a list (image_urls=a.png --file image_urls=b.png).
 
-Needs FAL_KEY in the environment and `pip install fal-client`. One job at a time: wait for it, look at it,
-then decide the next one.
+Needs FAL_KEY in the environment (or in a .env file in the current directory or any parent) and
+`pip install fal-client`. One job at a time: wait for it, look at it, then decide the next one.
 """
 import argparse
 import json
@@ -60,6 +60,22 @@ def ext_for(url, hint):
     return mimetypes.guess_extension(hint or '') or '.bin'
 
 
+def load_dotenv():
+    """Fill missing environment variables from the nearest .env, walking up from the current directory."""
+    d = os.getcwd()
+    while True:
+        p = os.path.join(d, '.env')
+        if os.path.isfile(p):
+            for line in open(p, encoding='utf-8'):
+                k, sep, v = line.strip().partition('=')
+                if sep and not k.startswith('#') and v.strip():
+                    os.environ.setdefault(k.strip(), v.strip().strip('"\''))
+            return
+        if os.path.dirname(d) == d:
+            return
+        d = os.path.dirname(d)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('endpoint')
@@ -69,6 +85,7 @@ def main():
     ap.add_argument('--file', action='append', default=[], metavar='KEY=PATH')
     a = ap.parse_args()
 
+    load_dotenv()
     if not os.environ.get('FAL_KEY'):
         sys.exit('FAL_KEY is not set')
     import fal_client  # pip install fal-client
